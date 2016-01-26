@@ -14,9 +14,6 @@
 #define MIN_OBSTACLE_SPEED 0.001
 #define MAX_OBSTACLE_SPEED 0.01
 
-#define SCORE_INCREMENT 0.10
-
-
 typedef SDL_Texture* Texture;
 
 unsigned window_x = 800;
@@ -27,7 +24,7 @@ unsigned window_start_y = 100;
 
 char* window_name = "6.179 Final Project - Dodger";
 int game_over = 0;
-float score = 0;
+int score = 0;
 
 // Player position, size, and speed
 double player_x = 0.5;
@@ -94,6 +91,7 @@ void moveObstacles() {
          free(obs);
          obstacles[i] = NULL;
          obstacle_count -= 1;
+         score += 1;
       }
    }
    return;
@@ -236,7 +234,7 @@ void displayScore() {
       font = TTF_OpenFont("OpenSans-Regular.ttf", 24);
    }
    char score_text[128];
-   snprintf(score_text, sizeof(score_text), "Score: %d", (int) score);
+   snprintf(score_text, sizeof(score_text), "Score: %d", score);
    SDL_Color color = {0, 0, 0};
    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(font, score_text, color);
    SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
@@ -304,7 +302,6 @@ int main(){
          game_over = 1;
          break;
       }
-      score += SCORE_INCREMENT;
 
       SDL_RenderClear(renderer);
 
@@ -324,7 +321,7 @@ int main(){
    }
    if (game_over) {
       char score_text[128];
-      snprintf(score_text, sizeof(score_text), "Game Over! Your score is %d.", (int) score);
+      snprintf(score_text, sizeof(score_text), "Game Over! Your score is %d.", score);
       SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Game Over :(", score_text, NULL);
       while (!quit) {
          while (SDL_PollEvent(&e)){
