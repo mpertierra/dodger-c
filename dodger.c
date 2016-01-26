@@ -252,7 +252,7 @@ void displayObstacles() {
 
 void displayScore() {
    if (font == NULL) {
-      font = TTF_OpenFont("OpenSans-Regular.ttf", 24);
+      font = TTF_OpenFont("fonts/OpenSans-Regular.ttf", 24);
    }
    char score_text[128];
    snprintf(score_text, sizeof(score_text), "Score: %d", score);
@@ -380,13 +380,13 @@ int main(){
         return 1;
    }
 
-   background_music = Mix_LoadMUS("vitas.wav");
+   background_music = Mix_LoadMUS("audio/background_music.wav");
    Mix_PlayMusic(background_music, -1);
    if(!background_music){
         printf("Could not open sound effect %s\n", Mix_GetError());
    }
 
-   collision_sound_effect = Mix_LoadWAV("laser.wav");
+   collision_sound_effect = Mix_LoadWAV("audio/collision_sound_effect.wav");
    if(!collision_sound_effect){
         printf("Could not open sound effect %s\n", Mix_GetError());
    }
@@ -397,9 +397,9 @@ int main(){
    }
 
    // Load Images for background, player and obstacles
-   background_image = loadImage("snowcow.png");
-   player_image = loadImage("nic_cage_cat.jpeg");
-   obstacle_image = loadImage("dodgers.jpg");
+   background_image = loadImage("images/background.png");
+   player_image = loadImage("images/player.jpg");
+   obstacle_image = loadImage("images/obstacle.jpg");
 
    playGame();
 
