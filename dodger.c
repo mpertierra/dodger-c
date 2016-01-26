@@ -17,22 +17,24 @@
 
 typedef SDL_Texture* Texture;
 
-unsigned window_x = 800;
-unsigned window_y = 600;
+SDL_Window *window = NULL;
 
-unsigned window_start_x = 200;
-unsigned window_start_y = 100;
+const unsigned window_x = 800;
+const unsigned window_y = 600;
 
-char* window_name = "6.179 Final Project - Dodger";
+const unsigned window_start_x = 200;
+const unsigned window_start_y = 100;
+
+const char* window_name = "6.179 Final Project - Dodger";
 int game_over = 0;
 int score = 0;
 
 // Player position, size, and speed
 double player_x = 0.5;
 double player_y = 1.0;
-double player_height = 0.05;
-double player_width  = 0.05;
-double player_speed = 0.01;
+const double player_height = 0.05;
+const double player_width  = 0.05;
+const double player_speed = 0.01;
 
 // Player direction
 int player_up = 0;
@@ -56,7 +58,24 @@ Obstacle * obstacles[MAX_NUM_OF_OBSTACLES] = {NULL};
 SDL_Renderer *renderer;
 
 Texture background_image, player_image, obstacle_image;
+Mix_Music *background_music = NULL;
+Mix_Chunk *collision_sound_effect = NULL;
 TTF_Font *font = NULL;
+
+const SDL_MessageBoxButtonData buttons[] = {
+   { /* .flags, .buttonid, .text */        0, 0, "No" },
+   { SDL_MESSAGEBOX_BUTTON_RETURNKEY_DEFAULT, 1, "Yes" }
+};
+
+SDL_MessageBoxData messageboxdata = {
+   SDL_MESSAGEBOX_INFORMATION, /* .flags */
+   NULL, /* .window */
+   "Game over :(", /* .title */
+   "Game over :(", /* .message */
+   SDL_arraysize(buttons), /* .numbuttons */
+   buttons, /* .buttons */
+   NULL /* .colorScheme */
+};
 
 double genRandDouble(double min, double max) {
    // assert (min <= max);
@@ -136,6 +155,7 @@ void freeObstacles() {
    for (i=0; i<MAX_NUM_OF_OBSTACLES; i++) {
       if (obstacles[i] != NULL) {
          free(obstacles[i]);
+         obstacles[i] = NULL;
       }
    }
 }
@@ -243,52 +263,34 @@ void displayScore() {
    displayTexture(Message, 10, 10, 100, 100, SDL_FLIP_NONE);
 }
 
-int main(){
-   if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
-      printf("SDL_Init failed: %s\n", SDL_GetError());
-      return 1;
-   }
+int gameOver() {
+   char score_text[128];
+   snprintf(score_text, sizeof(score_text), "Game Over! Your score is %d. Try again?", score);
+   messageboxdata.message = score_text;
 
-   SDL_Window *window = SDL_CreateWindow(window_name,window_start_x,window_start_y, window_x,window_y,SDL_WINDOW_SHOWN);
-   if (!window){
-      printf("Window creation failed: %s\n", SDL_GetError());
+   int buttonid;
+   if (SDL_ShowMessageBox(&messageboxdata, &buttonid) < 0 || buttonid == -1 || buttonid == 0) {
+      Mix_Quit();
+      TTF_Quit();
+      IMG_Quit();
       SDL_Quit();
-      return 1;
-   }
-   
-   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-   if (!renderer){
-      printf("Renderer creation failed: %s\n", SDL_GetError());
-      SDL_Quit();
+      freeObstacles();
       return 1;
    }
 
-   if( Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 2, 4096 ) == -1 ) {
-        printf("Audio creation failed %s\n", Mix_GetError());
-        return 1;
-   }
+   return 0;
+}
 
-   Mix_Music *background_music = Mix_LoadMUS("vitas.wav");
-   Mix_PlayMusic(background_music, -1);
-   if(!background_music){
-        printf("Could not open sound effect %s\n", Mix_GetError());
-   }
+void resetGame() {
+   score = 0;
+   player_x = 0.5;
+   player_y = 1.0;
+   freeObstacles();
+   obstacle_count = 0;
+   obstacle_gen_prob = INIT_OBSTACLE_GEN_PROBABILITY;
+}
 
-   Mix_Chunk *laser = Mix_LoadWAV("laser.wav");
-   if(!laser){
-        printf("Could not open sound effect %s\n", Mix_GetError());
-   }
-   
-   if (TTF_Init() == -1) {
-      printf("TTF_Init: %s\n", TTF_GetError());
-      return 1;
-   }
-
-   // Load Images
-   background_image = loadImage("snowcow.png");
-   player_image = loadImage("nic_cage_cat.jpeg");
-   obstacle_image = loadImage("dodgers.jpg");
-
+void playGame() {
    //Our event structure
    SDL_Event e;
    int quit = 0;
@@ -316,7 +318,7 @@ int main(){
 
       // Check for collisions
       if (checkCollision()) {
-         Mix_PlayChannel( -1, laser, 0 );
+         Mix_PlayChannel( -1, collision_sound_effect, 0 );
          game_over = 1;
          break;
       }
@@ -337,20 +339,69 @@ int main(){
       displayScore();
       SDL_RenderPresent(renderer);
    }
+
    if (game_over) {
-      char score_text[128];
-      snprintf(score_text, sizeof(score_text), "Game Over! Your score is %d.", score);
-      SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "Game Over :(", score_text, NULL);
-      while (!quit) {
-         while (SDL_PollEvent(&e)){
-            if (e.type == SDL_QUIT) quit = 1;
-         }
-      }
+      if (!gameOver()) {
+         game_over = 0;
+         resetGame();
+         playGame();
+      };
+   } else {
+      Mix_Quit();
+      TTF_Quit();
+      IMG_Quit();
+      SDL_Quit();
+      freeObstacles();
    }
-   Mix_Quit();
-   TTF_Quit();
-   IMG_Quit();
-   SDL_Quit();
-   freeObstacles();
+}
+
+int main(){
+   if (SDL_Init(SDL_INIT_EVERYTHING) != 0){
+      printf("SDL_Init failed: %s\n", SDL_GetError());
+      return 1;
+   }
+
+   window = SDL_CreateWindow(window_name,window_start_x,window_start_y, window_x,window_y,SDL_WINDOW_SHOWN);
+   if (!window){
+      printf("Window creation failed: %s\n", SDL_GetError());
+      SDL_Quit();
+      return 1;
+   }
+
+   renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+   if (!renderer){
+      printf("Renderer creation failed: %s\n", SDL_GetError());
+      SDL_Quit();
+      return 1;
+   }
+
+   if (Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 2, 4096 ) == -1) {
+        printf("Audio creation failed %s\n", Mix_GetError());
+        return 1;
+   }
+
+   background_music = Mix_LoadMUS("vitas.wav");
+   Mix_PlayMusic(background_music, -1);
+   if(!background_music){
+        printf("Could not open sound effect %s\n", Mix_GetError());
+   }
+
+   collision_sound_effect = Mix_LoadWAV("laser.wav");
+   if(!collision_sound_effect){
+        printf("Could not open sound effect %s\n", Mix_GetError());
+   }
+
+   if (TTF_Init() == -1) {
+      printf("TTF_Init: %s\n", TTF_GetError());
+      return 1;
+   }
+
+   // Load Images for background, player and obstacles
+   background_image = loadImage("snowcow.png");
+   player_image = loadImage("nic_cage_cat.jpeg");
+   obstacle_image = loadImage("dodgers.jpg");
+
+   playGame();
+
    return 0;
 }
