@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <SDL2/SDL_image.h>
+#include <SDL2/SDL_mixer.h>
 #include <SDL2/SDL_ttf.h>
 
 #define MAX_NUM_OF_OBSTACLES 25
@@ -55,7 +56,7 @@ Obstacle * obstacles[MAX_NUM_OF_OBSTACLES] = {NULL};
 SDL_Renderer *renderer;
 
 Texture background_image, player_image, obstacle_image;
-TTF_Font* font = NULL;
+TTF_Font *font = NULL;
 
 double genRandDouble(double min, double max) {
    // assert (min <= max);
@@ -261,6 +262,22 @@ int main(){
       SDL_Quit();
       return 1;
    }
+
+   if( Mix_OpenAudio( 22050, MIX_DEFAULT_FORMAT, 2, 4096 ) == -1 ) {
+        printf("Audio creation failed %s\n", Mix_GetError());
+        return 1;
+   }
+
+   Mix_Music *background_music = Mix_LoadMUS("vitas.wav");
+   Mix_PlayMusic(background_music, -1);
+   if(!background_music){
+        printf("Could not open sound effect %s\n", Mix_GetError());
+   }
+
+   Mix_Chunk *laser = Mix_LoadWAV("laser.wav");
+   if(!laser){
+        printf("Could not open sound effect %s\n", Mix_GetError());
+   }
    
    if (TTF_Init() == -1) {
       printf("TTF_Init: %s\n", TTF_GetError());
@@ -299,6 +316,7 @@ int main(){
 
       // Check for collisions
       if (checkCollision()) {
+         Mix_PlayChannel( -1, laser, 0 );
          game_over = 1;
          break;
       }
@@ -329,7 +347,9 @@ int main(){
          }
       }
    }
+   Mix_Quit();
    TTF_Quit();
+   IMG_Quit();
    SDL_Quit();
    freeObstacles();
    return 0;
