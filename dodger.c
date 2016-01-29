@@ -28,6 +28,7 @@ const unsigned window_start_y = 100;
 const char* window_name = "6.179 Final Project - Dodger";
 int game_over = 0;
 int score = 0;
+int top_score = 0;
 
 // Player position, size, and speed
 double player_x = 0.5;
@@ -255,12 +256,12 @@ void displayScore() {
       font = TTF_OpenFont("fonts/OpenSans-Regular.ttf", 24);
    }
    char score_text[128];
-   snprintf(score_text, sizeof(score_text), "Score: %d", score);
+   snprintf(score_text, sizeof(score_text), "Score: %d  Top Score: %d", score, top_score);
    SDL_Color color = {0, 0, 0};
    SDL_Surface* surfaceMessage = TTF_RenderText_Solid(font, score_text, color);
    SDL_Texture* Message = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
    SDL_FreeSurface(surfaceMessage);
-   displayTexture(Message, 10, 10, 100, 100, SDL_FLIP_NONE);
+   displayTexture(Message, 10, 10, 200, 100, SDL_FLIP_NONE);
 }
 
 int gameOver() {
@@ -291,6 +292,11 @@ void resetGame() {
 }
 
 void playGame() {
+   FILE *fp;
+   fp = fopen("top_score", "r");
+   fscanf(fp, "%d", &top_score);
+   fclose(fp);
+
    //Our event structure
    SDL_Event e;
    int quit = 0;
@@ -338,6 +344,14 @@ void playGame() {
       displayObstacles();
       displayScore();
       SDL_RenderPresent(renderer);
+   }
+
+   // Save top score if necessary
+   if (score > top_score) {
+      top_score = score;
+      fp = fopen("top_score", "w");
+      fprintf(fp, "%d", top_score);
+      fclose(fp);
    }
 
    if (game_over) {
